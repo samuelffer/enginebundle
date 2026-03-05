@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "enginebundle"
+version = "0.1.0"
+description = "AI context generator for Unity projects"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["unity", "gamedev", "ai", "context", "bundle"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Code Generators",
+]
+# Zero runtime dependencies — intentional
+dependencies = []
+
+[project.scripts]
+enginebundle = "enginebundle._cli:main"
+
+[project.urls]
+Homepage = "https://github.com/samuelffer/enginebundle"
+Repository = "https://github.com/samuelffer/enginebundle"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["enginebundle*"]
