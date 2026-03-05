@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "enginebundle"
@@ -19,6 +19,9 @@ classifiers = [
 ]
 # Zero runtime dependencies — intentional
 dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
 
 [project.scripts]
 enginebundle = "enginebundle._cli:main"
