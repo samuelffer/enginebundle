@@ -398,8 +398,21 @@ def _render_manifest(scan: ProjectScan, project_root: Path) -> dict:
 # Public API
 # ---------------------------------------------------------------------------
 
-def create_bundle(project_root: Path, *, output_dir: Path) -> Tuple[Path, Path]:
+def create_bundle(
+    project_root: Path,
+    *,
+    output_dir: Path,
+    only: Optional[List[str]] = None,
+    scene_filter: Optional[List[str]] = None,
+) -> Tuple[Path, Path]:
     """Scan a Unity project and write the bundle to output_dir.
+
+    Args:
+        project_root:  Root of the Unity project.
+        output_dir:    Where to write the bundle folder and zip.
+        only:          Optional list of file keys to include.
+        scene_filter:  Optional list of relative scene paths to include.
+                       If None, all scenes are included.
 
     Returns (bundle_dir, zip_path).
     """
@@ -411,10 +424,20 @@ def create_bundle(project_root: Path, *, output_dir: Path) -> Tuple[Path, Path]:
 
     scan = scan_project(project_root)
 
+    # Apply scene filter if provided
+    if scene_filter is not None:
+        # Normalise separators for cross-platform comparison
+        norm = {p.replace("\\", "/") for p in scene_filter}
+        scan.scenes  = [s for s in scan.scenes  if s.rel_path.replace("\\", "/") in norm]
+        scan.prefabs = [p for p in scan.prefabs if p.rel_path.replace("\\", "/") in norm]
+
     bundle_dir = output_dir / f"{project_root.name}_bundle"
     bundle_dir.mkdir(parents=True, exist_ok=True)
 
     files_to_zip: List[Path] = []
+
+    def want(key: str) -> bool:
+        return only is None or key in only
 
     def write(name: str, content: str) -> Path:
         p = bundle_dir / name
@@ -422,16 +445,26 @@ def create_bundle(project_root: Path, *, output_dir: Path) -> Tuple[Path, Path]:
         files_to_zip.append(p)
         return p
 
-    write("SUMMARY.md", _render_summary(scan))
-    write("SCRIPTS.md", _render_scripts_md(scan))
-    write("HIERARCHY.txt", _render_hierarchy(scan, min_only=False))
-    write("HIERARCHY_MIN.txt", _render_hierarchy(scan, min_only=True))
-    write("ASSEMBLIES.txt", _render_assemblies(scan))
-    write("SCENES.txt", _render_scenes(scan))
-    write(
-        "MANIFEST.json",
-        json.dumps(_render_manifest(scan, project_root), ensure_ascii=False, indent=2),
-    )
+    if want("summary"):
+        write("SUMMARY.md", _render_summary(scan))
+    if want("scripts"):
+        write("SCRIPTS.md", _render_scripts_md(scan))
+    if want("hierarchy"):
+        write("HIERARCHY.txt", _render_hierarchy(scan, min_only=False))
+    if want("hierarchy_min"):
+        write("HIERARCHY_MIN.txt", _render_hierarchy(scan, min_only=True))
+    if want("assemblies"):
+        write("ASSEMBLIES.txt", _render_assemblies(scan))
+    if want("scenes"):
+        write("SCENES.txt", _render_scenes(scan))
+    if want("manifest"):
+        write(
+            "MANIFEST.json",
+            json.dumps(_render_manifest(scan, project_root), ensure_ascii=False, indent=2),
+        )
+
+    if not files_to_zip:
+        raise ValueError("No files selected — check your --only filter.")
 
     zip_path = output_dir / f"{project_root.name}_bundle.zip"
     if zip_path.exists():
